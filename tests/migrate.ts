@@ -100,6 +100,144 @@ export namespace erc20v3 {
   }
 }
 
+export namespace ogs {
+  export type Input = {
+    deployer: Signer;
+    wethAddress: string;
+    multisigAddress: string;
+    // initializableERC20Address: string;
+    // customERC20Address: string;
+    defaultMaintainer: string;
+    cloneFactoryAddress?: string;
+  };
+
+  export type Output = {};
+
+  export async function deployOGS(config: Input) {
+    const builtFactories = {
+      cloneFactoryFactory: (await ethers.getContractFactory(
+        "CloneFactory"
+      )) as CloneFactory__factory,
+      dodoSellHelper: (await ethers.getContractFactory(
+        "DODOSellHelper"
+      )) as DODOSellHelper__factory,
+      feeRateModel: (await ethers.getContractFactory(
+        "FeeRateModel"
+      )) as FeeRateModel__factory,
+      feeRateImpl: (await ethers.getContractFactory(
+        "FeeRateImpl"
+      )) as FeeRateImpl__factory,
+      dvmTemplate: (await ethers.getContractFactory("DVM")) as DVM__factory,
+      dppTemplate: (await ethers.getContractFactory("DPP")) as DPP__factory,
+      dppAdminTemplate: (await ethers.getContractFactory(
+        "DPPAdmin"
+      )) as DPPAdmin__factory,
+
+      dodoApprove: (await ethers.getContractFactory(
+        "DODOApprove"
+      )) as DODOApprove__factory,
+      dodoApproveProxy: (await ethers.getContractFactory(
+        "DODOApproveProxy"
+      )) as DODOApproveProxy__factory,
+
+      dvmFactory: (await ethers.getContractFactory(
+        "DVMFactory"
+      )) as DVMFactory__factory,
+      dppFactory: (await ethers.getContractFactory(
+        "DPPFactory"
+      )) as DPPFactory__factory,
+      dodoV2Adapter: (await ethers.getContractFactory(
+        "DODOV2Adapter"
+      )) as DODOV2Adapter__factory,
+      dodoDppProxy: (await ethers.getContractFactory(
+        "DODODppProxy"
+      )) as DODODppProxy__factory,
+      dodoV2Proxy02: (await ethers.getContractFactory(
+        "DODOV2Proxy02"
+      )) as DODOV2Proxy02__factory,
+    };
+
+    // deploy multicall
+    const buildContracts: Record<string, any> = {};
+
+    const cloneFactory = await builtFactories.cloneFactoryFactory.deploy();
+    config.cloneFactoryAddress = cloneFactory.address;
+
+    const feeRateModel = await builtFactories.feeRateModel.deploy();
+    await feeRateModel.initOwner(await config.deployer.getAddress());
+
+    buildContracts.feeRateModel = feeRateModel;
+
+    buildContracts.dvmTemplate = await builtFactories.dvmTemplate.deploy();
+
+    const dvmFactory = await builtFactories.dvmFactory.deploy(
+      config.cloneFactoryAddress,
+      buildContracts.dvmTemplate.address,
+      config.defaultMaintainer,
+      buildContracts.feeRateModel.address
+    );
+    dvmFactory.initOwner(config.multisigAddress);
+    buildContracts.dvmFactory = dvmFactory;
+
+    buildContracts.dppAdminTemplate =
+      await builtFactories.dppAdminTemplate.deploy();
+
+    buildContracts.dppTemplate = await builtFactories.dppTemplate.deploy();
+
+    const dodoApproveContract = await builtFactories.dodoApprove.deploy();
+    buildContracts.dodoApprove = dodoApproveContract;
+
+    const dodoApproveProxy = await builtFactories.dodoApproveProxy.deploy(
+      dodoApproveContract.address
+    );
+    buildContracts.dodoApproveProxy = dodoApproveProxy;
+
+    // DPP Factory
+    const dppFactory = await builtFactories.dppFactory.deploy(
+      config.cloneFactoryAddress,
+      buildContracts.dppTemplate.address,
+      buildContracts.dppAdminTemplate.address,
+      config.defaultMaintainer,
+      buildContracts.feeRateModel.address,
+      buildContracts.dodoApproveProxy.address
+    );
+    dppFactory.initOwner(await config.deployer.getAddress());
+    buildContracts.dppFactory = dppFactory;
+
+    buildContracts.dodoSellHelper =
+      await builtFactories.dodoSellHelper.deploy();
+
+    buildContracts.dodoV2Proxy02 = await builtFactories.dodoV2Proxy02.deploy(
+      buildContracts.dvmFactory.address,
+      config.wethAddress,
+      buildContracts.dodoApproveProxy.address,
+      buildContracts.dodoSellHelper.address
+    );
+
+    const dodoDppProxy = await builtFactories.dodoDppProxy.deploy(
+      config.wethAddress,
+      buildContracts.dodoApproveProxy.address,
+      buildContracts.dppFactory.address
+    );
+    buildContracts.dodoDppProxy = dodoDppProxy;
+    // dodoDppProxy.init(await config.deployer.getAddress());
+    // await dodoApproveProxy.initOwner(await config.deployer.getAddress());
+    await dodoApproveProxy.init(
+      await config.deployer.getAddress(),
+      [
+        buildContracts.dodoV2Proxy02?.address,
+        buildContracts.dodoDspProxy?.address,
+        buildContracts.dodoCpProxy?.address,
+        buildContracts.dodoDppProxy.address,
+        buildContracts.dodoMineV3Proxy?.address,
+        buildContracts.dodoRouteProxy?.address,
+      ].filter(Boolean)
+    );
+
+    return buildContracts;
+  }
+}
+
 export namespace core {
   export type Input = {
     deployer: Signer;
@@ -110,6 +248,7 @@ export namespace core {
     customERC20Address: string;
     defaultMaintainer: string;
   };
+
   export type Output = {};
 
   export async function deployDODO_V2(config: Input) {
@@ -198,11 +337,9 @@ export namespace core {
       dodoMineV2Factory: (await ethers.getContractFactory(
         "DODOMineV2Factory"
       )) as DODOMineV2Factory__factory,
-
       dodoV2RouteHelper: (await ethers.getContractFactory(
         "DODOV2RouteHelper"
       )) as DODOV2RouteHelper__factory,
-
       dodoV1Adapter: (await ethers.getContractFactory(
         "DODOV1Adapter"
       )) as DODOV1Adapter__factory,
@@ -212,7 +349,6 @@ export namespace core {
       uniAdapter: (await ethers.getContractFactory(
         "UniAdapter"
       )) as UniAdapter__factory,
-
       dodoDspProxy: (await ethers.getContractFactory(
         "DODODspProxy"
       )) as DODODspProxy__factory,

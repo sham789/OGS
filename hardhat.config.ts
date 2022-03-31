@@ -21,7 +21,7 @@ export default {
       url: "https://rpc.goerli.mudit.blog/",
       accounts: process.env.TESTNET_PK ? [process.env.TESTNET_PK] : undefined,
     },
-    ftmtestnet_2: {
+    ftmtestnet: {
       // url: "https://rpc.ankr.com/fantom",
       url: "https://rpc.testnet.fantom.network",
       accounts: process.env.TESTNET_PK ? [process.env.TESTNET_PK] : undefined,

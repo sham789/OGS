@@ -44,6 +44,10 @@ contract OGSPPool is DPP {
         PMMPricing.adjustedTarget(state);
     }
 
+    function readDONPrice() external view returns (uint256) {
+        return _readDONPrice();
+    }
+
     function _readDONPrice() internal view returns (uint256) {
         IEACAggregatorProxy priceFeed = IEACAggregatorProxy(_refDON);
         (

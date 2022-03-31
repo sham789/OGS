@@ -24,7 +24,7 @@ import { ERC20PresetFixedSupply } from "../typechain-types/ERC20PresetFixedSuppl
 import { ERC20PresetFixedSupply__factory } from "../typechain-types/factories/ERC20PresetFixedSupply__factory";
 import { WrappedNative__factory } from "./../typechain-types/factories/WrappedNative__factory";
 
-import { erc20v3, core } from "./migrate";
+import { erc20v3, core, ogs  } from "./migrate";
 import { prettyPrint, prettyPrintContractDeployment } from "./utils";
 import { DPP } from "../typechain-types/DPP";
 import { DPPFactory } from "./../typechain-types/DPPFactory";
@@ -98,7 +98,8 @@ describe("DPP test coverage", () => {
         defaultMaintainer: deployer.address,
       };
 
-      const resp_dodo_v2 = await core.deployDODO_V2(input);
+      // const resp_dodo_v2 = await core.deployDODO_V2(input);
+      const resp_dodo_v2 = await ogs.deployOGS(input);
 
       const dppContract = resp_dodo_v2.dppTemplate as DPP;
 
