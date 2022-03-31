@@ -18,10 +18,12 @@ export default {
       accounts: process.env.PK ? [process.env.PK] : undefined,
     },
     goerli: {
+      timeout: 60000,
       url: "https://rpc.goerli.mudit.blog/",
       accounts: process.env.TESTNET_PK ? [process.env.TESTNET_PK] : undefined,
     },
     ftmtestnet: {
+      // gas: 5000000,
       // url: "https://rpc.ankr.com/fantom",
       url: "https://rpc.testnet.fantom.network",
       accounts: process.env.TESTNET_PK ? [process.env.TESTNET_PK] : undefined,

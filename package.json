@@ -26,12 +26,14 @@
     "compile:h": "hardhat compile",
     "test:dodo:ftmtestnet": "hardhat run --network ftmtestnet_2 ./scripts/dpp-deploy.ts",
     "test:dodo:goerli": "hardhat run --network goerli ./scripts/dpp-deploy.ts",
-    "testnet:cli": "hardhat run ./scripts/ogs-cli.ts"
+    "testnet:cli": "hardhat run --network ftmtestnet ./scripts/ogs-cli.ts",
+    "testnet:goerli:cli": "hardhat run --network goerli ./scripts/deploy-ogs.ts"
   },
   "dependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.5",
     "@nomiclabs/hardhat-etherscan": "^3.0.3",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
+    "@openzeppelin/contracts": "^4.5.0",
     "@truffle/hdwallet-provider": "^1.5.1",
     "@typechain/ethers-v5": "^9.0.0",
     "@typechain/hardhat": "^5.0.0",

@@ -1,3 +1,5 @@
+import { FreeToken__factory } from "./../typechain-types/factories/FreeToken__factory";
+// import { FreeToken__factory } from "./../typechain-types/factories/FreeToken__factory";
 import { ERC20PresetMinterPauser__factory } from "./../typechain-types/factories/ERC20PresetMinterPauser__factory";
 import Big from "big.js";
 import { ethers } from "hardhat";
@@ -22,41 +24,24 @@ import {
 import { core } from "../tests/migrate";
 import { WrappedNative__factory } from "./../typechain-types/factories/WrappedNative__factory";
 
-class EACDataBuilder {
-  static buildConstructorArgs(amt: number, dec: number): [string, string] {
-    return [
-      new Big(amt).mul(Math.pow(10, dec)).toFixed(),
-      new Big(dec).toFixed(),
-    ];
-  }
-}
-
 async function start() {
   const [deployer] = await ethers.getSigners();
 
   const erc20factory = (await ethers.getContractFactory(
-    "ERC20PresetMinterPauser"
-  )) as ERC20PresetMinterPauser__factory;
+    "contracts/ERC20/FreeToken.sol:FreeToken"
+  )) as FreeToken__factory;
 
-  const gtonToken = await erc20factory.deploy(
-    "GTON Capital Token",
-    "GTON"
-  );
-
+  const gtonToken = await erc20factory.deploy("GTON Capital Token", "GTON");
   const usdcToken = await erc20factory.deploy("USD Coin", "USDC");
-  // const gtonToken = await erc20fixedSupplyFactory.deploy(
-  //   "GTON Capital Token",
-  //   "GTON",
-  //   new Big(21_000_000).mul(1e18).toFixed(),
-  //   deployer.address
-  // );
 
-  // const usdcToken = await erc20fixedSupplyFactory.deploy(
-  //   "USD Coin",
-  //   "USDC",
-  //   new Big(1_000_000).mul(1e18).toFixed(),
-  //   deployer.address
-  // );
+  await gtonToken.freeMint(
+    deployer.address,
+    new Big(100_000).mul(1e18).toFixed()
+  );
+  await usdcToken.freeMint(
+    deployer.address,
+    new Big(100_000).mul(1e18).toFixed()
+  );
 
   const wethFactory = (await ethers.getContractFactory(
     "WrappedNative"
@@ -91,7 +76,6 @@ async function start() {
 
   const dodoDppProxy = resp_dodo_v2.dodoDppProxy as DODODppProxy;
   const dppFactory = resp_dodo_v2.dppFactory as DPPFactory;
-  const dodoV2Proxy02 = resp_dodo_v2.dodoV2Proxy02 as DODOV2Proxy02;
 
   const OGSDPP = await ogsDppFactory.deploy();
 
@@ -134,7 +118,7 @@ async function start() {
   console.log({ K, I });
 
   console.log({
-    resp_dodo_v2: mapValues(resp_dodo_v2, (x) => x.address),
+    resp: mapValues(resp_dodo_v2, (x) => x.address),
     OGSDPP: OGSDPP.address,
     poolAddr,
     poolAddrList,

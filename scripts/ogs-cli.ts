@@ -1,6 +1,7 @@
+import { FreeToken__factory } from "./../typechain-types/factories/FreeToken__factory";
+import { FreeToken } from "./../typechain-types/FreeToken";
 import { OGSPPool__factory } from "./../typechain-types/factories/OGSPPool__factory";
-import { ERC20__factory } from "./../typechain-types/factories/ERC20__factory";
-import { ERC20 } from "./../typechain-types/ERC20";
+
 import { OGSDPP } from "./../typechain-types/OGSDPP";
 import { OGSPPool } from "./../typechain-types/OGSPPool";
 import { EACAggregatorProxyMock } from "./../typechain-types/EACAggregatorProxyMock";
@@ -10,10 +11,6 @@ import inquirer from "inquirer";
 import { ethers } from "hardhat";
 import Big from "big.js";
 
-import { DODODppProxy__factory } from "./../typechain-types/factories/DODODppProxy__factory";
-import { DODODppProxy } from "./../typechain-types/DODODppProxy";
-import { DODOV2Proxy02__factory } from "./../typechain-types/factories/DODOV2Proxy02__factory";
-import { DPPFactory__factory } from "./../typechain-types/factories/DPPFactory__factory";
 import { OGSDPP__factory } from "./../typechain-types/factories/OGSDPP__factory";
 import { isNil } from "lodash";
 
@@ -21,8 +18,8 @@ type InquirerQuestion = { type: string; name: string; message: string };
 type MatchResult<T> = { value?: T; matched: boolean };
 
 type OGSContext = {
-  base: ERC20;
-  quote: ERC20;
+  base: FreeToken;
+  quote: FreeToken;
   eacProxyMock?: EACAggregatorProxyMock;
   ogsDPP: OGSDPP;
   ogsPPool: OGSPPool;
@@ -45,8 +42,8 @@ class QuestionsHandler {
 
   welcome(): InquirerQuestion {
     const commands = [
-      "swapViaOGS: swapViaOGS gton usdc 100",
-      "faucet: faucet gton 100",
+      "swapViaOGS: swapViaOGS (gton|usdc) (gton|usdc) 100",
+      "faucet: faucet (gton|usdc) 100",
     ].join("\n");
 
     return {
@@ -81,12 +78,27 @@ class QuestionsHandler {
       gton: this.deployResult.gtonToken.toString(),
       usdc: this.deployResult.usdcToken.toString(),
     };
-    const tokensToERC20: Record<string, ERC20> = {
+    const tokensToERC20: Record<string, FreeToken> = {
       gton: this.ogs_context.base.attach(tokens.gton),
       usdc: this.ogs_context.base.attach(tokens.usdc),
     };
 
     switch (spl[0]) {
+      case "faucet":
+        const faucetAmount = spl[2];
+        // console.log({ spl, faucetAmount });
+        const faucetAmountBig = new Big(faucetAmount).mul(1e18).toFixed();
+        console.log({ spl, faucetAmountBig: faucetAmountBig });
+
+        console.log(
+          `swap via ogs executed successfully. check tx: ${(
+            await tokensToERC20[spl[1]].freeMint(
+              deployer.address,
+              faucetAmountBig
+            )
+          ).hash.toString()}`
+        );
+        return { matched: true };
       case "swapViaOGS":
         const swapAmount = spl[3];
 
@@ -122,57 +134,55 @@ async function start() {
     eacProxyMock: (await ethers.getContractFactory(
       "EACAggregatorProxyMock"
     )) as EACAggregatorProxyMock__factory,
-    erc20: (await ethers.getContractFactory(
-      "contracts/ERC20/WrappedNative.sol:ERC20"
-    )) as ERC20__factory,
+    erc20: (await ethers.getContractFactory("FreeToken")) as FreeToken__factory,
   };
 
   const deployResult = {
-    resp_dodo_v2: {
-      multicall: "0xC7EF876b38A5b5A6d251fC53e774FF547f461c7C",
-      dodoSellHelper: "0xB4E88E860E0c6d017cD2e3e67A69Bb3369F2ac20",
-      dodoSwapHelper: "0x3412ee6218596C8De0D62f220BC5af4C588730aB",
-      erc20helper: "0x32932FA8A14faA5A28Fa4953FE7Cb96345B66F0d",
-      dodoCalleeHelper: "0x0A16F6483f15C12E7e1FE7DC1Bab76242DBe223D",
-      dodoV1PmmHelper: "0x3B4eAdCbdE997c4C5bf975F56468490c8761CE1B",
-      feeRateModel: "0x87066AA6C10e5A95E4C4F6624174e182e101aA4C",
-      userQuota: "0x0fD2E44f2f0339B66711E10993d80df0EeD7Db80",
-      feeRateImpl: "0xe7A7f1234d84D737A0909625aC70D8d05948E715",
-      permissionManager: "0xF498c3401fc5C401ddbf55D9c039Df0bA027Da25",
-      dvmTemplate: "0x577fe52950b26C701F8Ce92c556A832de73Bd999",
-      dspTemplate: "0x3fcC20A4c44da09A69A5453Da90948bAe961d02B",
-      dppTemplate: "0xE402Bb96943CB86A8Ed46B971216d9eEC40033dD",
-      dppAdminTemplate: "0x1091837AB64ce2836287353Ce89f5c6Ee86870AE",
-      cpTemplate: "0x1f6526d891cBF675bb8445A5F86f63c49bEc2b91",
-      erc20initializable: "0x9bd094b3bb6559748F38A792b885375F4BE89f11",
-      erc20Mine: "0x7F2D3D90414203f98b5252F002E07074fA12447D",
-      erc20MineV3: "0x90232c10709affcB51dE6eF005C91727A4cD0E57",
-      dodoApprove: "0xe2C77C083746119DEc5ddFA25ad15E4cD4A8EF44",
-      dodoApproveProxy: "0x625837470ab8fF5EBfB842d688F9278b30465a60",
-      erc20V2Factory: "0x05b438A852Cf371b9406B2DBdb36Ab15443Bd851",
-      dvmFactory: "0x20276754e01038FF493af32f3D6dCd13346260Ec",
-      dppFactory: "0x47FFE5D6015f39Cca39bC5eC518Dd2f9b52135d2",
-      upCrowdPoolingFactory: "0xf94D6D2135922565249D9e27c70d674C0C926C27",
-      crowdPoolingFactory: "0xf4F6a3F4eBE36E752e0A7C21C199c2967B04aE27",
-      dspFactory: "0xcB029B5626667527523425DD30f91Ff468910E18",
-      dodoMineV2Factory: "0xF5B1BE7F235E3b69698da373221AE17d7299826e",
-      dodoMineV3RegistryFactory: "0x07FAa360D6415c7b088C534D0f4D57F890830D6D",
-      dodoV2Helper: "0xAF2d560D2Cb466f7f67d1E647e2C7D33A2b28E7F",
-      dodoV1Adapter: "0x205AB83C8C3DDbA13ED872E1688Fb55F1E6D946b",
-      dodoV2Adapter: "0xA5525b495596eA70D10993aaCB0A26b7cabaCFD3",
-      uniAdapter: "0x0591AEBb33848395768192Ac1683653c9133f9cc",
-      dodoV2Proxy02: "0x7F90d4dc38fA19d61622202d028D493f444F5Dff",
-      dodoDspProxy: "0x15805c330B41D6455924f38f54A569CcF67cb254",
-      dodoCpProxy: "0x9104bFE21B15482f2E38b70f9aAB2b9E15d2E616",
-      dodoDppProxy: "0x188289e128E782563BFBe19c32aA9E21Eca208ee",
-      dodoMineV3Proxy: "0xC68333E86618AC91689f505356A6B6b6c42e3aBE",
-      dodoRouteProxy: "0x5c728E2630108400e34AaE2fF8092209a25033d3",
+    resp: {
+      multicall: "0x1a0B462Cacc0e8473a27567fbd3e87d9e5c9B2d0",
+      dodoSellHelper: "0x3DB6BAE65fEA1a1bc9F16672D84cE0A24c9026b5",
+      dodoSwapHelper: "0xB51eC5D0a4234ea85484024acb71AB500342E1DD",
+      erc20helper: "0x87eDCFBd4006bddA59e131EEA84f477565460516",
+      dodoCalleeHelper: "0xEaE55Eb6CAb5E722908FD9671e90917E4F5aB536",
+      dodoV1PmmHelper: "0xF6a642098C0384b6B47Ea93A0846b0D3CA861263",
+      feeRateModel: "0xD7a416875C4cffa085348F239cf265e49B7A95CA",
+      userQuota: "0x47322caF0666338f6761E72702f0D1ab1a8728C1",
+      feeRateImpl: "0x1a121a9c2a799d1899E55c83A97e58a0762117e5",
+      permissionManager: "0x19cd56ecce550f10771572904f06de68af83cf9d",
+      dvmTemplate: "0xe1eb2e069ccbAb1Fe9E0945e6f655d25D992aC93",
+      dspTemplate: "0xCD32608b93CCdC613328E979D5673f7Fa539DF38",
+      dppTemplate: "0x44b3c0c42Bb7fD2096542FB697821ADdFE547b90",
+      dppAdminTemplate: "0x37afc07b38b07EE3c486eB45189b59379D7934b6",
+      cpTemplate: "0x74b18851BBe02A03157857a4aE888E8383F5967C",
+      erc20initializable: "0x9C12C0d2D2197D04F17c56a69D4E7c6Af54ce73D",
+      erc20Mine: "0x007d1b7E73225d971c1ea8012f69F3bE78FA70c8",
+      erc20MineV3: "0xB52a63FB9cFce294E1Cf0f0bcd92d416104e675b",
+      dodoApprove: "0xd57d3517e05e35ba7c91A94e57ae3cAD223d373B",
+      dodoApproveProxy: "0xa70cdd654A7ceC87FF2aCb9AB3620CAD295402B1",
+      erc20V2Factory: "0x8C8854D83567c6010dab57e742e8E8158706464c",
+      dvmFactory: "0x6104539c46352f6E698FFb8D795C7BacB03aD8b1",
+      dppFactory: "0xD8215f0E58F268EFc914DD2ed7E0Ed4CBf993576",
+      upCrowdPoolingFactory: "0x11fA71C6AA7d0FB1BCCFbCD395aeAb65B71FC854",
+      crowdPoolingFactory: "0x03Ed113dD785b631163A9DE0437b7B1437525876",
+      dspFactory: "0xd63A1Ff53da9f48DFF475bfe3D233Edc87C6Ed0A",
+      dodoMineV2Factory: "0x3710DfDC267370A435255eCC9ce0a3091dD86eC4",
+      dodoMineV3RegistryFactory: "0xe5C0C08a086688CF3aD79b378A31554E2a5e4F6E",
+      dodoV2Helper: "0x224D77494118212e8019dCf9f30FfeeA9016dBD1",
+      dodoV1Adapter: "0x11AE20B15773C80f6E32e6d5974e108f5Cb420ea",
+      dodoV2Adapter: "0xA4bF5d4b0915090b64617F1456dd7Cf11D36eDbc",
+      uniAdapter: "0x386E24C7C4dDadf5E37C1bB92427fC3F95b966a4",
+      dodoV2Proxy02: "0x67fDA50Fba0CB8A95eC19F83920164a6C3Bee11c",
+      dodoDspProxy: "0x4897B4Db94C22778351af29AA5A0cCdfD50Fe0b2",
+      dodoCpProxy: "0x61e344c605f10A9B3caC8b7E0B5d6A7d40Df1379",
+      dodoDppProxy: "0x470Ea663d4e9B4fc644122c629c95AE71C81dEe0",
+      dodoMineV3Proxy: "0xBd1579Bf8697479AE42F1918f198D7A3C521F371",
+      dodoRouteProxy: "0xDF05E6c6885952a08c5497BC3C32E1EE25Db382C",
     },
-    OGSDPP: "0x45dbC16c2ddD06E94b6c2C849b88108Df068EC27",
-    poolAddr: "0x0FeEDdC4Af11929d00fDA26Efa7626a1bBFB3301",
-    poolAddrList: ["0x0FeEDdC4Af11929d00fDA26Efa7626a1bBFB3301"],
-    gtonToken: "0x4a8261e2f16288cbf06c14219de2204e1f6c745d",
-    usdcToken: "0x6f50cf4327fb7dfb5ca8a3a3768c5ab7f845ac86",
+    OGSDPP: "0x1a0Dcb6814af30D6743841a6F425792e644E16bF",
+    poolAddr: "0xe1276DC6bc744f063d6f05Dc4C8ec1bD7C61b2cB",
+    poolAddrList: ["0xe1276DC6bc744f063d6f05Dc4C8ec1bD7C61b2cB"],
+    gtonToken: "0xD04B30F9b223547035C9BC5F1dD700995cA0aBa3",
+    usdcToken: "0x7312a3112e4048F33d69A5C6BbA20CD5E688Edd7",
   };
 
   const builtContracts = {
