@@ -1,3 +1,4 @@
+import { ERC20PresetMinterPauser__factory } from "./../typechain-types/factories/ERC20PresetMinterPauser__factory";
 import Big from "big.js";
 import { ethers } from "hardhat";
 import { mapValues } from "lodash";
@@ -33,22 +34,29 @@ class EACDataBuilder {
 async function start() {
   const [deployer] = await ethers.getSigners();
 
-  const erc20fixedSupplyFactory = (await ethers.getContractFactory(
-    "ERC20PresetFixedSupply"
-  )) as ERC20PresetFixedSupply__factory;
+  const erc20factory = (await ethers.getContractFactory(
+    "ERC20PresetMinterPauser"
+  )) as ERC20PresetMinterPauser__factory;
 
-  const gtonToken = await erc20fixedSupplyFactory.deploy(
+  const gtonToken = await erc20factory.deploy(
     "GTON Capital Token",
-    "GTON",
-    new Big(21_000_000).mul(1e18).toFixed(),
-    deployer.address
+    "GTON"
   );
-  const usdcToken = await erc20fixedSupplyFactory.deploy(
-    "USD Coin",
-    "USDC",
-    new Big(1_000_000).mul(1e18).toFixed(),
-    deployer.address
-  );
+
+  const usdcToken = await erc20factory.deploy("USD Coin", "USDC");
+  // const gtonToken = await erc20fixedSupplyFactory.deploy(
+  //   "GTON Capital Token",
+  //   "GTON",
+  //   new Big(21_000_000).mul(1e18).toFixed(),
+  //   deployer.address
+  // );
+
+  // const usdcToken = await erc20fixedSupplyFactory.deploy(
+  //   "USD Coin",
+  //   "USDC",
+  //   new Big(1_000_000).mul(1e18).toFixed(),
+  //   deployer.address
+  // );
 
   const wethFactory = (await ethers.getContractFactory(
     "WrappedNative"
@@ -66,10 +74,6 @@ async function start() {
 
   const weth = await wethFactory.deploy();
 
-  // const erc20v3_res = await erc20v3.deployERC20_V3({
-  //   erc20: gtonToken.address,
-  // } as erc20v3.Input);
-
   // GNOSIS SAFE
   const multisig = Wallet.createRandom();
 
@@ -78,7 +82,6 @@ async function start() {
     wethAddress: weth.address,
     multisigAddress: multisig.address,
     cloneFactoryAddress: cloneFactoryContract.address,
-    // cloneFactoryAddress: erc20v3_res.cloneFactoryContract.address,
     initializableERC20Address: gtonToken.address,
     customERC20Address: gtonToken.address,
     defaultMaintainer: deployer.address,
@@ -117,7 +120,7 @@ async function start() {
     "99999999999"
   );
 
-  console.log({ poolDeployResp });
+  // console.log({ poolDeployResp });
 
   const poolAddrList = await dppFactory.getDODOPool(
     gtonToken.address,
@@ -126,23 +129,31 @@ async function start() {
   const poolAddr = poolAddrList[0];
 
   const dppTempl = _dppFactory.attach(poolAddr);
-  // const dppBalanceGetter = await buildDPPGetter(dppTempl);
 
   const swapAmount = 100;
   console.log({ K, I });
 
-  await gtonToken.approve(
-    OGSDPP.address,
-    new Big(swapAmount).mul(1e18).toFixed()
-  );
-  await OGSDPP.swapPrivatePool(
+  console.log({
+    resp_dodo_v2: mapValues(resp_dodo_v2, (x) => x.address),
+    OGSDPP: OGSDPP.address,
     poolAddr,
-    gtonToken.address,
-    usdcToken.address,
-    new Big(swapAmount).mul(1e18).toFixed(),
-    deployer.address,
-    true
-  );
+    poolAddrList,
+    gtonToken: gtonToken.address,
+    usdcToken: usdcToken.address,
+  });
+
+  // await gtonToken.approve(
+  //   OGSDPP.address,
+  //   new Big(swapAmount).mul(1e18).toFixed()
+  // );
+  // await OGSDPP.swapPrivatePool(
+  //   poolAddr,
+  //   gtonToken.address,
+  //   usdcToken.address,
+  //   new Big(swapAmount).mul(1e18).toFixed(),
+  //   deployer.address,
+  //   true
+  // );
 }
 
 start();
